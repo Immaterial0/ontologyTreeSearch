@@ -131,15 +131,14 @@ updateOnt = function(z) {
 
 #traverses provided json file passed in ont parameter and generates list of 
 traverseOnt = function(startAnnot,ont){
- 
-    maxRes = 3000 #max number of is_a relationships to return
-    stack = rep(1,maxRes)  
+    maxRes = strtoi(unlist(ont[startAnnot])[1]) #max number of is_a relationships to return
+    stack = rep("GO:0000000",maxRes)  
     indexCurr = 1
     indexLast = 0 
 
     a = unlist(ont[startAnnot])
     if(length(a) > 0){
-        for(entry in 1:length(a)){
+        for(entry in 2:length(a)){
             indexLast = indexLast + 1
             x = a[entry]
             stack[indexLast] = x
@@ -150,7 +149,7 @@ traverseOnt = function(startAnnot,ont){
         a = unlist(ont[stack[indexCurr]])  
         if(length(a) > 0){
             #print('1length ok')
-            for(entry in 1:length(a)){  
+            for(entry in 2:length(a)){  
                 #print('2loop ok')
                 if(!(a[entry] %in% stack)){
                     #print('3not visited')
@@ -161,6 +160,7 @@ traverseOnt = function(startAnnot,ont){
         }
         indexCurr = indexCurr + 1
     }
+    print(indexLast)
     return(stack[1:indexLast])  
  
 } 
@@ -183,18 +183,23 @@ print(results)
 }
  
  
+#testOnt()
 
 
 
 
 
 
+#ontRev <- fromJSON(file = "ontRevLen.json")   
+#unlist(ontRev['GO:0008150'])[1]
 
-#ontRev <- fromJSON(file = "ontRev.json")   
-#traverseOnt('GO:0016740',ontRev)
+
+
+ #test1 = traverseOnt('GO:0008150' ,ontRev)
+ #print(length(test1))
 #[1] "GO:0016765" "GO:0016740" "GO:0003824" "GO:0003674"
 
-
+#GO:0008150
 
 
  
