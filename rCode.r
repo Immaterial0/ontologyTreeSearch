@@ -1,20 +1,28 @@
+
+
+#TODO - reuse skip index?  
+#TODO - add comments
+#TODO - add alternate relationships extension
+#TODO - see if loop checking is necessary
+#TODO - preprocess data to determine size of traversal array to generate
+
+
+
 library(rjson) 
-z1 <- structure(c(0L, 1L, 9L, 0L, 9L, 9L, 9L, 9L, 1L, 1L, 0L, 9L, 0L,
-1L, 0L, 9L, 9L, 1L, 9L, 9L, 0L, 9L, 0L,
-1L, 0L, 9L, 9L, 1L, 9L, 9L), .Dim = c(10L, 3L), .Dimnames = list(
-    c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), c("GO:0016765",
-    "GO:0016740", "G2O:0016740"))) 
- 
-   
-print(z1)
 
 
- 
 updateOnt = function(z) {
-    ontFor <- fromJSON(file = "ont.json") 
-    ontRev <- fromJSON(file = "ontRev.json") 
-    #input - z : matrix of columns labeled With GO ids and rows as distinct proteins    
+    #input z = matrix with column names as GO ids and rows as distinct annotated objects 
+
+    ontFor <- fromJSON(file = "ont.json") #is_a relationships
+    ontRev <- fromJSON(file = "ontRev.json") #reverse of is_a relationships
+ 
+
     annots = colnames(z) #annotation names from columns
+    l = length(annots)
+
+
+
 
     #ensure input is right type
     if(class(z) != 'matrix') {
@@ -24,9 +32,9 @@ updateOnt = function(z) {
 
     #create skip list to ignore all columns that don't have names in the ontology file 
     #TODO - make sure that colnames is stable (that it stays in order)
-    skip=rep(1,length(annots))  
+    skip=rep(1,l)  
     skipind = 0
-    for(col in 1:length(annots)){
+    for(col in 1:l){
         if(is.null( ontFor[annots[col]] [[1]]) ){
             skipind = skipind + 1 
             skip[skipind] = annots[col] 
@@ -41,27 +49,27 @@ updateOnt = function(z) {
         skip = c()
     }
 
-    if(length(z[1,]) - skipind < 2) {
+    if(l - skipind < 2) {
         print('Too few valid columns for updateOnt function') 
         return(0)
     } 
-  
-    l = length(annots)
+ 
     #create matrix of zeroes to store possible update locations 
     m = matrix(0L,  l, l) 
     mR = matrix(0L, l, l) 
 
+
     for(row in 1:length(z[,1])){
         nines = rep(0,l)
         indNines = 0 
-        for(col in 1:l){
+        for(col in 1:l){ #get list of all nines in a row
             if(z[row,col] == 9){
                 indNines = indNines + 1
                 nines[indNines] = col
             } 
         }
         if(indNines > 0){
-            for(col in 1:l){
+            for(col in 1:l){ #when there are nines in a row, update m and mR if 1 or 0 in a row respectively
                 if(z[row,col] == 1 ){
                     for(mcol in 1:indNines){
                         m[mcol,col] = 1
@@ -75,9 +83,9 @@ updateOnt = function(z) {
             } 
         } 
     } 
-    for(col in 1:l){
+    for(col in 1:l){ #if m matrix indicates potential updates for an annotation, trace ontology tree and update any relevant annotations
         flag = FALSE
-        for(row in 1:l){
+        for(row in 1:l){ #   
             if(m[row,col]==1 & !flag){
                 potentials = traverseOnt(annots[col],ontFor)
                 flag = TRUE                
@@ -94,7 +102,7 @@ updateOnt = function(z) {
             }     
         } 
     }
-     for(col in 1:l){
+     for(col in 1:l){ #same as above but for mR
         flag = FALSE
         for(row in 1:l){
             if(mR[row,col]==1 & !flag){
@@ -121,7 +129,7 @@ updateOnt = function(z) {
 
 
 
-
+#traverses provided json file passed in ont parameter and generates list of 
 traverseOnt = function(startAnnot,ont){
  
     maxRes = 3000 #max number of is_a relationships to return
@@ -157,11 +165,32 @@ traverseOnt = function(startAnnot,ont){
  
 } 
 
- results = updateOnt(z1)
- print(results)
- #ontRev <- fromJSON(file = "ontRev.json") 
 
 
+
+#simple test of function
+testOnt = function(){
+
+z1 <- structure(c(0L, 1L, 9L, 0L, 9L, 9L, 9L, 9L, 1L, 1L, 0L, 9L, 0L, 1L, 0L, 9L, 9L, 1L, 9L, 9L, 0L, 9L, 0L,
+1L, 0L, 9L, 9L, 1L, 9L, 9L), 
+.Dim = c(10L, 3L), 
+.Dimnames = list( c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), c("GO:0016765", "GO:0016740", "G2O:0016740"))) 
+ 
+   
+print(z1)
+results = updateOnt(z1)
+print(results)
+}
+ 
+ 
+
+
+
+
+
+
+
+#ontRev <- fromJSON(file = "ontRev.json")   
 #traverseOnt('GO:0016740',ontRev)
 #[1] "GO:0016765" "GO:0016740" "GO:0003824" "GO:0003674"
 
