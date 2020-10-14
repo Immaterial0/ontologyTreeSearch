@@ -42,7 +42,15 @@ itags = ['intersection_of: GO:',
 ]
 icount = [0,0,0,0,0,0,0,0]
 
+d = {}
 
+altid = {}
+
+obsolete = {}
+
+consider = {}
+
+replaced = {}
 
 
 for(let i = 0;i<rnames.length;i++){
@@ -105,7 +113,42 @@ for(let j = 0;j<inames.length;j++){
 
 		}
 		 
+		if(matches && matches[0]=='disjoint_from: GO:'){
+			if(t[0] in d){
+				d[t[0]].push(temp[j].match(/GO:\d+/)[0])
+			}
+			else{
+				d[t[0]] = [ temp[j].match(/GO:\d+/)[0] ]
+			} 		 }
 		
+			if(matches && matches[0]=='alt_id: GO:'){
+				if(t[0] in altid){
+					altid[t[0]].push(temp[j].match(/GO:\d+/)[0])
+				}
+				else{
+					altid[t[0]] = [ temp[j].match(/GO:\d+/)[0] ]
+				} 		 }
+			if(matches && matches[0]=='consider: GO:'){
+				if(t[0] in consider){
+					consider[t[0]].push(temp[j].match(/GO:\d+/)[0])
+				}
+				else{
+					consider[t[0]] = [ temp[j].match(/GO:\d+/)[0] ]
+				} 		 }
+			if(matches && matches[0]=='replaced_by: GO:'){
+			
+				if(t[0] in replaced){
+					replaced[t[0]].push(temp[j].match(/GO:\d+/)[0])
+				}
+				else{
+					replaced[t[0]] = [ temp[j].match(/GO:\d+/)[0] ]
+				} 		
+			}
+			matches2 = temp[j].match(/^is_obsolete:/)	
+			if(matches2 && matches2[0]=='is_obsolete:'){
+				obsolete[t[0]] = 1
+			}
+				
 		if(matches && !atrID[matches[0]]){
 			
 			atrID[matches[0]] = 1
@@ -139,6 +182,57 @@ for(let j = 0;j<inames.length;j++){
 		console.log(err);
 	}
 }); 
+
+iJSON = JSON.stringify(inter)
+
+fs.writeFile("i.json", iJSON, function(err) {
+   if (err) {
+	   console.log(err);
+   }
+}); 
+dJSON = JSON.stringify(d)
+
+fs.writeFile("d.json", dJSON, function(err) {
+   if (err) {
+	   console.log(err);
+   }
+}); 
+
+altidJSON = JSON.stringify(altid)
+
+
+fs.writeFile("altid.json", altidJSON, function(err) {
+	if (err) {
+		console.log(err);
+	}
+ }); 
+
+ replacedJSON = JSON.stringify(replaced)
+
+
+ fs.writeFile("replaced.json", replacedJSON, function(err) {
+	 if (err) {
+		 console.log(err);
+	 }
+  }); 
+
+  considerJSON = JSON.stringify(consider)
+
+
+fs.writeFile("consider.json", considerJSON, function(err) {
+	if (err) {
+		console.log(err);
+	}
+ }); 
+ obsoleteJSON = JSON.stringify(obsolete)
+
+
+fs.writeFile("obsolete.json", obsoleteJSON, function(err) {
+	if (err) {
+		console.log(err);
+	}
+ }); 
+
 
 
  function saveont(){
