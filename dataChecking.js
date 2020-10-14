@@ -14,31 +14,34 @@ for(let i = 0,j=0,k=0;i<ok.length;i++){
     temp = []
     //if(i%1000 == 0) console.log(i)
     for(j = 0;j<ont[ok[i]].length;j++){
-        if(temp.includes(ont[ok[i]][j])){
-            console.log('loop detected')
-            exit()
-
-        } 
-        else{
+        /*if(temp.includes(ont[ok[i]][j])){
+            //console.log('loop detected')
+ 
+        }  
+        else{ */
             temp.push(ont[ok[i]][j])
  
-        }
+        //}
     }
     for(k=0;k<temp.length;k++){
-        if(!(temp[k] in ont)){
+         if(!(temp[k] in ont)){
             //console.log(temp,temp[k],'not in ont')
             continue
         } 
         for(j = 0;j<ont[temp[k]].length;j++){
-            if(temp.includes(ont[temp[k]][j])){
+           /* if(temp.includes(ont[temp[k]][j])){
                 //console.log(temp,'loop detected',ont[temp[k]][j])
-                continue
+               // continue
     
-            } 
-            else{
+            }  
+            else{ */
                 temp.push(ont[temp[k]][j])
      
-            }
+           // }
+        }
+        if(k > 50000000){
+            console.log('over 1M',temp.slice(-30,-1))
+            exit()
         }
     }        
     if(temp.length > maxArr.length) maxArr = temp, idmax = id  
@@ -46,21 +49,24 @@ for(let i = 0,j=0,k=0;i<ok.length;i++){
 
 }
 
-for(let i = 0;i<ok.length;i++){
-    ont[ok[i]].unshift(dist[i])
 
-}
 
 console.log(maxArr.length,idmax)
 
-ontJSON = JSON.stringify(ont)
+function saveLengths(){
+    for(let i = 0;i<ok.length;i++){
+        ont[ok[i]].unshift(dist[i])
 
-fs.writeFile("ontRevLen.json", ontJSON	, function(err) {
-    if (err) {
-        console.log(err);
     }
-});
- 
+
+    ontJSON = JSON.stringify(ont)
+
+    fs.writeFile("ontRevLen.json", ontJSON	, function(err) {
+        if (err) {
+            console.log(err);
+        }
+    });
+}
 //loops do indeed exist in this set seemingly, perhaps consider if there is a reason. 
 
 

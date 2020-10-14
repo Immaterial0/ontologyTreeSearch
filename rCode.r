@@ -1,18 +1,18 @@
 
 
 #TODO - reuse skip index?  
-#TODO - add comments
-#TODO - add alternate relationships extension
-#TODO - see if loop checking is necessary
-#TODO - preprocess data to determine size of traversal array to generate
+ #TODO - add alternate relationships extension
+#  - see if loop checking is necessary // it is
+#  - preprocess data to determine size of traversal array to generate // almost seems slower
 
 
 
 library(rjson) 
 
 
-updateOnt = function(z) {
+updateOnt = function(z,r = []) {
     #input z = matrix with column names as GO ids and rows as distinct annotated objects 
+    #input r = array of relationships desired, empty array gives just is_a relations, 'all' gives all, otherwise use code key TODO
 
     ontFor <- fromJSON(file = "ont.json") #is_a relationships
     ontRev <- fromJSON(file = "ontRev.json") #reverse of is_a relationships
@@ -87,7 +87,7 @@ updateOnt = function(z) {
         flag = FALSE
         for(row in 1:l){ #   
             if(m[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],ontFor)
+                potentials = traverseOnt(annots[col],ontFor,r,1)
                 flag = TRUE                
                  
             }
@@ -106,7 +106,7 @@ updateOnt = function(z) {
         flag = FALSE
         for(row in 1:l){
             if(mR[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],ontRev)
+                potentials = traverseOnt(annots[col],ontRev,r,0)
                 flag = TRUE                
                  
             }
@@ -130,15 +130,17 @@ updateOnt = function(z) {
 
 
 #traverses provided json file passed in ont parameter and generates list of 
-traverseOnt = function(startAnnot,ont){
-    maxRes = strtoi(unlist(ont[startAnnot])[1]) #max number of is_a relationships to return
+traverseOnt = function(startAnnot,ont,r,dir){
+
+
+    maxRes = 3000 #initial number of is_a relationships to fill array with
     stack = rep("GO:0000000",maxRes)  
     indexCurr = 1
     indexLast = 0 
 
     a = unlist(ont[startAnnot])
     if(length(a) > 0){
-        for(entry in 2:length(a)){
+        for(entry in 1:length(a)){
             indexLast = indexLast + 1
             x = a[entry]
             stack[indexLast] = x
@@ -149,7 +151,7 @@ traverseOnt = function(startAnnot,ont){
         a = unlist(ont[stack[indexCurr]])  
         if(length(a) > 0){
             #print('1length ok')
-            for(entry in 2:length(a)){  
+            for(entry in 1:length(a)){  
                 #print('2loop ok')
                 if(!(a[entry] %in% stack)){
                     #print('3not visited')
