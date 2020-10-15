@@ -1,7 +1,7 @@
 
 
 #TODO - reuse skip index?  
- #TODO - add alternate relationships extension
+ #  - add alternate relationships extension //make sure it works
 #  - see if loop checking is necessary // it is
 #  - preprocess data to determine size of traversal array to generate // almost seems slower
 
@@ -10,17 +10,64 @@
 library(rjson) 
 
 
-updateOnt = function(z,r = []) {
+updateOnt = function(z,r = c()) {
     #input z = matrix with column names as GO ids and rows as distinct annotated objects 
     #input r = array of relationships desired, empty array gives just is_a relations, 'all' gives all, otherwise use code key TODO
 
     ontFor <- fromJSON(file = "ont.json") #is_a relationships
     ontRev <- fromJSON(file = "ontRev.json") #reverse of is_a relationships
- 
+    ontAdd = fromJSON(file = 'r.json') #additional relationships json
 
+    #obs,alt,con,rep
+
+
+    allFor = c('rp', 'rrp', 'rrn', 'rr', 'ro', 're', 'rh', 'rd', 'i', 'ir', 'ip', 'irp', 'irn', 'ih', 'io', 'id', 'd' )
+    if(is.vector(r)){
+        for(ele in 1:length(r)){
+            if(!(e %in% allFor)){
+                print('Invalid tag in relationship array')
+                print(e)
+                return(0)
+            }
+        }
+    }
+    else if(r == 'all'){
+        r = allFor
+    }
+    else{
+        print('relationship array is not a vector or "all" ')
+        return(0)
+    }
+    
+   
     annots = colnames(z) #annotation names from columns
     l = length(annots)
 
+    #check for obsolete names in column list
+    obsolete = ontAdd['obs'][[1]]
+    obsnames = names(obsolete)
+    consider = ontAdd['con'][[1]]
+    connames = names(consider)
+    replacedby = ontAdd['rep'][[1]]
+    repnames = names(replacedby)
+    altid = ontAdd['alt'][[1]]
+    altnames = names(altid)
+
+    for(i in 1:l){ #check to make sure this works
+        if(annots[i] %in% obsnames){
+            print('Obsolete annotation in use')
+            if(annots[i] %in% connames){
+                for(j in 1:length(consider[annots[i]])){
+                    print(paste('consider :',consider[annots[i]][j]))
+                }
+            }
+            if(annots[i] %in% repnames){
+                for(j in 1:length(replacedby[annots[i]])){
+                    print(paste('replacedby :',replacedby[annots[i]][j]))
+                }
+            }
+        }
+    }
 
 
 
@@ -87,7 +134,7 @@ updateOnt = function(z,r = []) {
         flag = FALSE
         for(row in 1:l){ #   
             if(m[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],ontFor,r,1)
+                potentials = traverseOnt(annots[col],ontFor,r,ontAdd,1)
                 flag = TRUE                
                  
             }
@@ -106,7 +153,7 @@ updateOnt = function(z,r = []) {
         flag = FALSE
         for(row in 1:l){
             if(mR[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],ontRev,r,0)
+                potentials = traverseOnt(annots[col],ontRev,r,ontAdd,0)
                 flag = TRUE                
                  
             }
@@ -130,13 +177,41 @@ updateOnt = function(z,r = []) {
 
 
 #traverses provided json file passed in ont parameter and generates list of 
-traverseOnt = function(startAnnot,ont,r,dir){
+traverseOnt = function(startAnnot,ont,r,ontAdd,dir){     
+    d = FALSE
 
-
-    maxRes = 3000 #initial number of is_a relationships to fill array with
+    if(dir == 1){
+        maxRes = 200 #initial number of is_a relationships to fill array with
+        r = c(r,'alt','rep') #automatically do altid and replacedby
+        if('d' %in% r) {
+            r = r[r != 'd']
+            d = TRUE 
+        }
+    } else{
+        maxRes = 3000
+        r = c( 'alt','rep')
+    }
     stack = rep("GO:0000000",maxRes)  
     indexCurr = 1
     indexLast = 0 
+    rl = lengt(r)
+
+    assign('d',ontAdd['d'][[1]]) 
+
+
+    for(i in 1:length(r)){
+        assign(r[i],ontAdd[r[i]][[1]]) 
+        if(!is.null(eval(parse(text = r[i]))[[startAnnot]])){
+            for(j in 1:length(eval(parse(text = r[i]))[[startAnnot]])){ #is this the right way to do loops here? 
+                indexLast = indexLast + 1
+                stack[indexLast] = eval(parse(text = r[i]))[[startAnnot]][j]
+
+            }
+        }
+    }
+
+     
+
 
     a = unlist(ont[startAnnot])
     if(length(a) > 0){
@@ -160,7 +235,36 @@ traverseOnt = function(startAnnot,ont,r,dir){
                 }
             } 
         }
+        for(i in 1:length(r)){
+            if(!is.null(eval(parse(text = r[i]))[[stack[indexCurr]]])){
+                for(j in 1:length(eval(parse(text = r[i]))[[stack[indexCurr]]])){ #is this the right way to do loops here? 
+                    indexLast = indexLast + 1
+                    stack[indexLast] = eval(parse(text = r[i]))[[stack[indexCurr]]][j]
+
+            }
+        }
+    }
+        
         indexCurr = indexCurr + 1
+
+    }
+    disjoint = rep(1,30)
+    disindex = 0
+    for(i in 1:length(stack)) {
+        if(!is.null(eval(parse(text = 'd'))[[stack[i]]])){
+            for(j in 1:length(eval(parse(text = 'd'))[[stack[i]])) {
+                disindex = disindex + 1
+                disjoint[disindex] = eval(parse(text = 'd'))[[stack[i]][j]
+            }
+        }
+
+    }
+    if(disindex > 0){ #load revont
+        dres = c()
+        for(i in 1:disindex){
+            q = traverseOnt(disjoint[i],ontRev,r,ontAdd,0)
+            dres = c(dres,q)
+        }
     }
     print(indexLast)
     return(stack[1:indexLast])  

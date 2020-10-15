@@ -175,7 +175,22 @@ for(let j = 0;j<inames.length;j++){
  //console.log(countloop1,countmatch,count,countOntLinks)
  //console.log(atrID)
  
- rJSON = JSON.stringify(r)
+ 
+
+ r.d = d
+r.alt = altid
+r.obs = obsolete
+r.con = consider
+r.rep = replaced
+
+for(let j = 0;j<inames.length;j++){
+	r[inames[j]] = inter[inames[j]]
+}
+
+console.log(Object.keys(r) )
+
+
+rJSON = JSON.stringify(r)
 
  fs.writeFile("r.json", rJSON, function(err) {
 	if (err) {
