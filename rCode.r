@@ -8,11 +8,12 @@
 #TODO - if r doesn't pass by reference, load object in the traversal function
 #TODO - traverse alternate names? That may be a thing in traversal already 
 #TODO list fields updated
+#make sure  
 
 library(rjson) 
 
 
-updateOnt = function(z,r = c()) {
+updateOnt = function(z,r = 'none') {
     #input z = matrix with column names as GO ids and rows as distinct annotated objects 
     #input r = array of relationships desired, empty array gives just is_a relations, 'all' gives all, otherwise use code key TODO
 
@@ -28,30 +29,31 @@ updateOnt = function(z,r = c()) {
     mainfor = c('rp', 'rrp', 'rrn', 'rr', 'i', 'ir', 'ip', 'irp', 'irn', 'd')
     allFor = c('rp', 'rrp', 'rrn', 'rr', 'ro', 're', 'rh', 'rd', 'i', 'ir', 'ip', 'irp', 'irn', 'ih', 'io', 'id', 'd' )
     if(is.vector(r)){
-        for(ele in 1:length(r)){
-            if(!(ele %in% allFor)){
-                print('Invalid tag in relationship array for updateOnt function')
-                print(ele)
-                return(0)
+        if ( r == 'main'){
+            r = mainfor
+        } else if( r == 'all'){
+            r = allFor
+        } else if (r == 'none'){
+            r = c()
+        } else {
+            for(ele in 1:length(r)){
+                if(!(r[ele] %in% allFor)){
+                    print('Invalid tag in relationship array for updateOnt function')
+                    print(r[ele])
+                    return(0)
+                }
             }
         }
-    }
-    else if (r == 'main'){
-        r = mainfor
-    }
-    else if(r == 'all'){
-        r = allFor
-    }
-    else{
-        print('relationship array is not a vector or "main" or "all" in updateOnt function')
+    } else{
+        print('relationship array is not a vector in updateOnt function')
         return(0)
     }
-    
+    #print(r)
    #obs,alt,con,rep
 
     annots = colnames(z) #annotation names from columns
     l = length(annots)
-
+ 
     #check for obsolete names in column list
     obsolete = ontAdd['obs'][[1]]
     obsnames = names(obsolete) #names of obsolete 
@@ -91,7 +93,7 @@ updateOnt = function(z,r = c()) {
         if(is.null( ontFor[annots[col]] [[1]]) && !( annots[col] %in% repnames) && !(annots[col] %in% altnames)){
             skipind = skipind + 1 
             skip[skipind] = annots[col] 
-        }
+         }
 
     }
     if(skipind > 0 ){
@@ -101,7 +103,7 @@ updateOnt = function(z,r = c()) {
     else{
         skip = c()
     }
-
+ 
     if(l - skipind < 2) {
         print('Too few valid columns for updateOnt function') 
         return(0)
@@ -110,7 +112,7 @@ updateOnt = function(z,r = c()) {
     #create matrix of zeroes to store possible update locations 
     m = matrix(0L,  l, l) 
     mR = matrix(0L, l, l) 
-
+    numUpdates = 0
 
     for(row in 1:length(z[,1])){
         nines = rep(0,l)
@@ -138,43 +140,49 @@ updateOnt = function(z,r = c()) {
     } 
     for(col in 1:l){ #if m matrix indicates potential updates for an annotation, trace ontology tree and update any relevant annotations
         flag = FALSE
-        for(row in 1:l){ #   
-            if(m[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],1,r)
-                flag = TRUE                
-                 
-            }
-            if(flag){
-                if(annots[row] %in% potentials ||  ){
-                    for(zRow in 1:length(z[,1])){
-                        if(z[zRow,col] == 1 & z[zRow,row] == 9){
-                            z[zRow,row] = 1 
+        if(!(annots[col] %in% skip)){   
+            for(row in 1:l){  
+                if(m[row,col]==1 && !flag && !(annots[row] %in% skip)){
+                    potentials = traverseOnt(annots[col],1,r)
+                    flag = TRUE                
+                    
+                }
+                if(flag){
+                    if(annots[row] %in% potentials || sum(replacedby[[annots[row]]] %in% potentials) > 0|| sum(replacedby[[annots[row]]] %in% potentials) > 0 ){
+                        for(zRow in 1:length(z[,1])){
+                            if(z[zRow,col] == 1 & z[zRow,row] == 9){
+                                z[zRow,row] = 1 
+                                numUpdates = numUpdates + 1
+                            }
                         }
                     }
-                 }
+                }  
             }     
         } 
     }
      for(col in 1:l){ #same as above but for mR
         flag = FALSE
-        for(row in 1:l){
-            if(mR[row,col]==1 & !flag){
-                potentials = traverseOnt(annots[col],0,r)
-                flag = TRUE                
-                 
-            }
-            if(flag){
-                if(annots[row] %in% potentials){
-                    for(zRow in 1:length(z[,1])){
-                        if(z[zRow,col] == 0 & z[zRow,row] == 9){
-                            z[zRow,row] = 0 
+        if(!(annots[col] %in% skip)){  
+            for(row in 1:l){
+                if(mR[row,col]==1 && !flag && !(annots[row] %in% skip)){
+                    potentials = traverseOnt(annots[col],0,r)
+                    flag = TRUE                
+                    
+                }
+                if(flag){
+                    if(annots[row] %in% potentials || sum(replacedby[[annots[row]]] %in% potentials) > 0|| sum(replacedby[[annots[row]]] %in% potentials) > 0){
+                        for(zRow in 1:length(z[,1])){
+                            if(z[zRow,col] == 0 & z[zRow,row] == 9){
+                                z[zRow,row] = 0 
+                                numUpdates = numUpdates + 1
+                            }
                         }
                     }
-                 }
-            }     
-        } 
+                }     
+            } 
+        }
     }
-
+    print(paste('total number of updates : ',numUpdates))
     return(z)
 } 
 
@@ -196,7 +204,7 @@ traverseOnt = function(startAnnot,dir,r=c()){
         if('d' %in% r) {
             r = r[r != 'd']
             d = TRUE 
-        }
+         }
 
     } else{
         ont <- fromJSON(file = "ontRev.json")   
@@ -211,12 +219,12 @@ traverseOnt = function(startAnnot,dir,r=c()){
 
 
     #Assigns strings in r to nested JSON objects in ontAdd and adds initial relations in r for start annot
-    for(i in 1:rl){
-        assign(r[i],ontAdd[r[i]][[1]]) 
-        if(!is.null(eval(parse(text = r[i]))[[startAnnot]])){
-            for(j in 1:length(eval(parse(text = r[i]))[[startAnnot]])){  
+    for(j in 1:rl){
+        assign(r[j],ontAdd[r[j]][[1]]) 
+        if(!is.null(eval(parse(text = r[j]))[[startAnnot]])){
+            for(k in 1:length(eval(parse(text = r[j]))[[startAnnot]])){  
                 indexLast = indexLast + 1
-                stack[indexLast] = eval(parse(text = r[i]))[[startAnnot]][j]
+                stack[indexLast] = eval(parse(text = r[j]))[[startAnnot]][k]
 
             }
         }
@@ -248,11 +256,11 @@ traverseOnt = function(startAnnot,dir,r=c()){
         }
         
         #same idea as the loop above, but now it looks at all the additional relationships that are in the r list. 
-        for(i in 1:rl){
-            if(!is.null(eval(parse(text = r[i]))[[stack[indexCurr]]])){
-                for(j in 1:length(eval(parse(text = r[i]))[[stack[indexCurr]]])){ #is this the right way to do loops here? 
+        for(k in 1:rl){
+            if(!is.null(eval(parse(text = r[k]))[[stack[indexCurr]]])){
+                for(j in 1:length(eval(parse(text = r[k]))[[stack[indexCurr]]])){ #is this the right way to do loops here? 
                     indexLast = indexLast + 1
-                    stack[indexLast] = eval(parse(text = r[i]))[[stack[indexCurr]]][j]
+                    stack[indexLast] = eval(parse(text = r[k]))[[stack[indexCurr]]][j]
 
                 }
             }
@@ -261,7 +269,6 @@ traverseOnt = function(startAnnot,dir,r=c()){
         indexCurr = indexCurr + 1
     }
     stack = stack[1:indexLast] 
-
 
     if(d == TRUE){
         assign('d',ontAdd['d'][[1]])  
@@ -280,8 +287,8 @@ traverseOnt = function(startAnnot,dir,r=c()){
         }
 
         #if we find a disjoint example, we will create 
+        dres = c() 
         if(disindex > 0){  
-            dres = c()
             for(i in 1:disindex){
                 q = traverseOnt(disjoint[i],0)
                 dres = c(dres,q) #this list can have duplicates 
@@ -290,7 +297,7 @@ traverseOnt = function(startAnnot,dir,r=c()){
         stack = c(stack,dres)
          
     } 
-    print(indexLast)
+    #print(indexLast)
     return(stack)   
 } 
 
@@ -300,29 +307,37 @@ traverseOnt = function(startAnnot,dir,r=c()){
 #simple test of function
 testOnt = function(){
 
-z1 <- structure(c(0L, 1L, 9L, 0L, 9L, 9L, 9L, 9L, 1L, 1L, 0L, 9L, 0L, 1L, 0L, 9L, 9L, 1L, 9L, 9L, 0L, 9L, 0L,
-1L, 0L, 9L, 9L, 1L, 9L, 9L), 
-.Dim = c(10L, 3L), 
-.Dimnames = list( c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), c("GO:0016765", "GO:0016740", "G2O:0016740"))) 
  
+ z1 <- structure(c(1L,0 ,9L,9,9L,9,0,1L), 
+ .Dim = c(4L,2L), 
+ .Dimnames = list(c("1","2",'3','4'),c("GO:0000030",'GO:0097502' )))
    
+ 
+
 print(z1)
-results = updateOnt(z1)
+results = updateOnt(z1,'main'   )
 print(results)
 }
  
  
+testOnt() 
 
-ontRev <- fromJSON(file = "ontRev.json")   
-#unlist(ontRev['GO:0008150'])[1]
+if (FALSE){
+    z1 <- structure(c(0L, 1L, 9L, 0L, 9L, 9L, 9L, 9L, 1L, 1L, 1, 1, 1, 9, 9, 1, 0, 0, 0, 0, 0, 9L, 0L,
+1L, 0L, 9L, 9L, 1L, 9L, 9L,1,1,0,0,1,9,9,1,0,9,1,9,1,1,0,9,0,1,9,9), 
+.Dim = c(10L, 5L), 
+.Dimnames = list( c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), c("GO2:0016765", "GO2:0003690", "GO:0003697",'GO:0003677','GO:0098847'
+))) 
+}
 
 
-
- test1 = traverseOnt('GO:0008150' ,ontRev)
- print(length(test1))
-#[1] "GO:0016765" "GO:0016740" "GO:0003824" "GO:0003674"
+ #[1] "GO:0016765" "GO:0016740" "GO:0003824" "GO:0003674"
 
 #GO:0008150
 
 
- 
+ # GO:0030584  disjoint from GO:0030587 which <-is_a GO:0099134 
+
+#GO:0003690 A GO:0003697
+#GO:0003677 B  GO:0098847 
+#ds dna binding disjoint from single strand dna binding

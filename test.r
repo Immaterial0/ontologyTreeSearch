@@ -1,7 +1,13 @@
 library(rjson) 
 
+#strings are vectors, length 0 vectors aren't vectors
+#class of strings and vectors of strings are the same
+#equality comparisons don't work with null? which includes 0 length vectors? 
 
 
+        ontFor <- fromJSON(file = "ont.json") 
+
+ontFor["GO:0003690"] [[1]]
 
 
 traverseOnt = function(startAnnot,dir,r=c()){     
@@ -123,20 +129,21 @@ traverseOnt = function(startAnnot,dir,r=c()){
 
 #largest
 #GO:0008150
-    ontAdd = fromJSON(file = 'r.json') #JSON of relationships
+    #ontAdd = fromJSON(file = 'r.json') #JSON of relationships
 
-    altid = ontAdd['alt'][[1]]
+    #altid = ontAdd['alt'][[1]]
 
-    print(altid[['GO:0004489']])
+    #print(altid['GO:0000050'] )
 
-
-
-
+ #altid[['GO:0000050']] %in% c('a','hi','2') 
 
 
 
 
-
+typeof(c( ) )
+typeof('none')
+typeof(c(1))
+typeof(c('hi','there'))
 
 
 
