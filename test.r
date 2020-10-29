@@ -5,7 +5,7 @@ library(rjson)
 #equality comparisons don't work with null? which includes 0 length vectors? 
 
 
-        ontFor <- fromJSON(file = "ont.json") 
+ontFor <- fromJSON(file = "ont.json") 
 
 ontFor["GO:0003690"] [[1]]
 

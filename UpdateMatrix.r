@@ -1,21 +1,37 @@
 
+#Code key for relationships
+#Relationships names numbeer of instance in data set (~sept 2020) and tags
 
-#TODO - reuse skip index?  
-#TODO - figure out why there is a loop in reverse direction only
- #  - add alternate relationships extension //make sure it works
-#  - see if loop checking is necessary // it is
-#  - preprocess data to determine size of traversal array to generate // almost seems slower
-#TODO - if r doesn't pass by reference, load object in the traversal function
-#TODO - traverse alternate names? That may be a thing in traversal already 
-#TODO list fields updated
-#make sure  
+#--disjoint_from 30 d
+
+#relationship: 
+#--part_of 8517 rp 
+#--positively_regulates 3057 rrp
+#--negatively_regulates 3079 rrn
+#--regulates 3533 rr
+#--occurs_in 192 ro
+#--ends_during 1 re
+#--has_part 776 rh
+#--happens_during 8 rd 
+
+#intersection_of: 
+#--intersection_of: 11812 i
+#--regulates 3561 ir
+#--part_of 1926 ip
+#--positively_regulates 3056 irp 
+#--negatively_regulates 3075 irn
+#--has_part 52 ih
+#--occurs_in 195 io
+#--happens_during 10 id
+
+
 
 library(rjson) 
 
 
 updateOnt = function(z,r = 'none') {
     #input z = matrix with column names as GO ids and rows as distinct annotated objects 
-    #input r = array of relationships desired, empty array gives just is_a relations, 'all' gives all, otherwise use code key TODO
+    #input r = array of relationships desired, empty array gives just is_a relations, 'all' gives all, otherwise use code key 
 
     ontAdd = fromJSON(file = 'r.json')
     ontFor <- fromJSON(file = "ont.json") 
@@ -25,8 +41,8 @@ updateOnt = function(z,r = 'none') {
         print('input to updateOnt not Matrix') 
         return(0)
     }  
-
-    mainfor = c('rp', 'rrp', 'rrn', 'rr', 'i', 'ir', 'ip', 'irp', 'irn', 'd')
+    none = c('rp')
+    mainfor = c('rp', 'rrp', 'rrn', 'rr' )
     allFor = c('rp', 'rrp', 'rrn', 'rr', 'ro', 're', 'rh', 'rd', 'i', 'ir', 'ip', 'irp', 'irn', 'ih', 'io', 'id', 'd' )
     if(is.vector(r)){
         if ( r == 'main'){
@@ -34,7 +50,7 @@ updateOnt = function(z,r = 'none') {
         } else if( r == 'all'){
             r = allFor
         } else if (r == 'none'){
-            r = c()
+            r = none
         } else {
             for(ele in 1:length(r)){
                 if(!(r[ele] %in% allFor)){
@@ -126,12 +142,12 @@ updateOnt = function(z,r = 'none') {
         if(indNines > 0){
             for(col in 1:l){ #when there are nines in a row, update m and mR if 1 or 0 in a row respectively
                 if(z[row,col] == 1 ){
-                    for(mcol in 1:indNines){
+                    for(mcol in nines){ #TODO make sure this works
                         m[mcol,col] = 1
                     }    
                 }
                 else if(z[row,col] == 0 ){
-                    for(mcol in 1:indNines){
+                    for(mcol in nines){
                         mR[mcol,col] = 1
                     }    
                 }  
@@ -231,7 +247,7 @@ traverseOnt = function(startAnnot,dir,r=c()){
     }  
      
 
-
+    #adds the initial relationships to stack for the startannot
     a = unlist(ont[startAnnot])
     if(length(a) > 0){
         for(entry in 1:length(a)){
@@ -285,8 +301,7 @@ traverseOnt = function(startAnnot,dir,r=c()){
             }
 
         }
-
-        #if we find a disjoint example, we will create 
+         #if we find a disjoint example, we will create 
         dres = c() 
         if(disindex > 0){  
             for(i in 1:disindex){
@@ -294,8 +309,7 @@ traverseOnt = function(startAnnot,dir,r=c()){
                 dres = c(dres,q) #this list can have duplicates 
             }
         }
-        stack = c(stack,dres)
-         
+         stack = c(stack,dres) 
     } 
     #print(indexLast)
     return(stack)   
@@ -308,14 +322,14 @@ traverseOnt = function(startAnnot,dir,r=c()){
 testOnt = function(){
 
  
- z1 <- structure(c(1L,0 ,9L,9,9L,9,0,1L), 
+ z1 <- structure(c(9L,0 ,1L,1,1L,9,9,1L), 
  .Dim = c(4L,2L), 
- .Dimnames = list(c("1","2",'3','4'),c("GO:0000030",'GO:0097502' )))
+ .Dimnames = list(c("1","2",'3','4'),c("GO:0001906",'GO:0044848' )))
    
  
 
 print(z1)
-results = updateOnt(z1,'main'   )
+results = updateOnt(z1,c('d')  )
 print(results)
 }
  
@@ -329,15 +343,4 @@ if (FALSE){
 .Dimnames = list( c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"), c("GO2:0016765", "GO2:0003690", "GO:0003697",'GO:0003677','GO:0098847'
 ))) 
 }
-
-
- #[1] "GO:0016765" "GO:0016740" "GO:0003824" "GO:0003674"
-
-#GO:0008150
-
-
- # GO:0030584  disjoint from GO:0030587 which <-is_a GO:0099134 
-
-#GO:0003690 A GO:0003697
-#GO:0003677 B  GO:0098847 
-#ds dna binding disjoint from single strand dna binding
+ 
